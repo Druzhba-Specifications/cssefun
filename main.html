@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Forum Chat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 700px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        h1 {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 15px;
+            font-size: 1.5em;
+        }
+        #chat-history {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-direction: column-reverse; /* Display new messages at the bottom */
+        }
+        .message-entry {
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+        .message-entry p {
+            margin: 0;
+            padding: 10px;
+            background-color: #e9e9eb;
+            border-radius: 5px;
+        }
+        .message-entry strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        #chat-form {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        #username-input, #message-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        #username-input {
+            width: 120px;
+        }
+        #message-input {
+            flex-grow: 1;
+        }
+        #chat-form button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        #chat-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h1>GitHub Forum Chat</h1>
+        <div id="chat-history"></div>
+        <form id="chat-form">
+            <input type="text" id="username-input" placeholder="Your Username" required>
+            <input type="text" id="message-input" placeholder="Type a message..." required>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+        // Replace with your JSONbin.io details
+        const BIN_ID = '68cd766843b1c97be9484d4f'; 
+        const API_KEY = '$2a$10$cmsfxK9yOcAb6syOnGDpl.uhVR3pfNChOLhJlUc7iPlmFbgjQuXZG';
+        const JSON_BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        const chatHistory = document.getElementById('chat-history');
+        const chatForm = document.getElementById('chat-form');
+        const usernameInput = document.getElementById('username-input');
+        const messageInput = document.getElementById('message-input');
+        
+        let lastMessageCount = 0;
+
+        async function fetchMessages() {
+            try {
+                const response = await fetch(JSON_BIN_URL, {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                const messages = data.record;
+
+                if (messages.length !== lastMessageCount) {
+                    chatHistory.innerHTML = '';
+                    messages.slice().reverse().forEach(msg => {
+                        const messageElement = document.createElement('div');
+                        messageElement.classList.add('message-entry');
+                        messageElement.innerHTML = `<p><strong>${msg.user}:</strong> ${msg.text}</p>`;
+                        chatHistory.appendChild(messageElement);
+                    });
+                    lastMessageCount = messages.length;
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        }
+
+        async function sendMessage(user, text) {
+            try {
+                const getResponse = await fetch(JSON_BIN_URL, {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                if (!getResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${getResponse.status}`);
+                }
+                const currentData = await getResponse.json();
+                const messages = currentData.record;
+
+                const newMessage = { user, text, timestamp: new Date().toISOString() };
+                messages.push(newMessage);
+                
+                const putResponse = await fetch(JSON_BIN_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY
+                    },
+                    body: JSON.stringify(messages)
+                });
+
+                if (!putResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${putResponse.status}`);
+                }
+
+                await fetchMessages();
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const message = messageInput.value.trim();
+            
+            if (username && message) {
+                sendMessage(username, message);
+                messageInput.value = '';
+            }
+        });
+
+        fetchMessages();
+        setInterval(fetchMessages, 2000); 
+    </script>
+</body>
+</html>
