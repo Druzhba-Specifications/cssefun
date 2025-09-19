@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 300px; text-align: center; }
+        .login-container h1 { margin-bottom: 20px; }
+        .login-container input[type="text"], .login-container input[type="password"] { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .login-container button { width: 100%; padding: 10px; background-color: #007bff; border: none; color: white; border-radius: 4px; cursor: pointer; }
+        .login-container button:hover { background-color: #0056b3; }
+        .error-message { color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <h1>Login</h1>
+    <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+    <div class="error-message" id="error-message"></div>
+</div>
+
+<script type="module">
+    // Import the Argon2 WASM library
+    // The path to the worker.min.js file must be correct
+    import * as argon2 from './argon2-wasm/build/argon2-wasm.js'; 
+
+    document.getElementById('loginForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorMessageDiv = document.getElementById('error-message');
+        errorMessageDiv.textContent = '';
+
+        // Replace with the raw URL to your users.json file on GitHub
+        const usersJsonUrl = 'https://raw.githubusercontent.com/YOUR-USERNAME/YOUR-REPO/main/users.json';
+
+        try {
+            const response = await fetch(usersJsonUrl);
+            if (!response.ok) {
+                throw new Error('Failed to fetch user data. Check the URL and file access.');
+            }
+            const users = await response.json();
+
+            const user = users.find(u => u.accountusername === username);
+
+            if (user) {
+                // Verify the user-provided password against the stored Argon2 hash
+                const isMatch = await argon2.verify({
+                    pass: password,
+                    encoded: user['account hash']
+                });
+
+                if (isMatch) {
+                    // Successful login
+                    localStorage.setItem('loggedIn', 'true');
+                    localStorage.setItem('username', user.accountusername);
+                    // Redirect to the chat page
+                    window.location.href = 'chat.html';
+                } else {
+                    // Failed login
+                    errorMessageDiv.textContent = 'Invalid username or password.';
+                }
+            } else {
+                // User not found
+                errorMessageDiv.textContent = 'Invalid username or password.';
+            }
+
+        } catch (error) {
+            console.error('Error during login:', error);
+            errorMessageDiv.textContent = 'An error occurred during login. Please try again.';
+        }
+    });
+</script>
+
+</body>
+</html>
