@@ -14,9 +14,22 @@
 </head>
 <body>
 
-<div class="login-container">
+
+<div class="login-container" style="margin-right: 350px;">
     <h1>Login to Join</h1>
     <button id="loginButton">Login</button>
+</div>
+
+<div id="roadmap-container" style="position: fixed; top: 50px; right: 40px; width: 300px; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 20px;">
+    <h2 style="margin-top:0;">Roadmap</h2>
+    <ul id="roadmap-list" style="list-style: none; padding: 0;">
+        <li><strong>Step 1:</strong> Login to access chat</li>
+        <li><strong>Step 2:</strong> Join discussions</li>
+        <li><strong>Step 3:</strong> Reply to threads</li>
+        <li><strong>Step 4:</strong> Customize your roadmap!</li>
+    </ul>
+    <textarea id="roadmap-edit" style="width:100%;height:80px;margin-top:10px;" placeholder="Edit roadmap steps here, one per line..."></textarea>
+    <button id="saveRoadmap" style="margin-top:10px;width:100%;background:#007bff;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">Save Roadmap</button>
 </div>
 
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
@@ -37,9 +50,27 @@
         });
     }
 
+    // Make login instant (no extra clicks)
     document.getElementById('loginButton').addEventListener('click', async function() {
-        await createAuth0Client();
-        await auth0Client.loginWithRedirect();
+        if (!auth0Client) {
+            await createAuth0Client();
+        }
+        auth0Client.loginWithRedirect();
+    });
+
+    // Roadmap edit/save logic
+    const roadmapList = document.getElementById('roadmap-list');
+    const roadmapEdit = document.getElementById('roadmap-edit');
+    const saveRoadmap = document.getElementById('saveRoadmap');
+
+    saveRoadmap.addEventListener('click', function() {
+        const steps = roadmapEdit.value.split('\n').filter(s => s.trim());
+        roadmapList.innerHTML = '';
+        steps.forEach((step, i) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>Step ${i+1}:</strong> ${step}`;
+            roadmapList.appendChild(li);
+        });
     });
 </script>
 

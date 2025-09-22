@@ -101,11 +101,38 @@
                 const messages = data.record;
                 if (messages.length !== lastMessageCount) {
                     chatHistory.innerHTML = '';
-                    messages.slice().reverse().forEach(msg => {
+                    // Build a map of messages by timestamp
+                    const msgMap = {};
+                    messages.forEach(msg => { msgMap[msg.timestamp] = {...msg, children: []}; });
+                    // Assign children to parents
+                    messages.forEach(msg => {
+                        if (msg.parentId && msgMap[msg.parentId]) {
+                            msgMap[msg.parentId].children.push(msgMap[msg.timestamp]);
+                        }
+                    });
+                    // Render top-level messages (no parentId)
+                    function renderThread(msg, indent=0) {
                         const messageElement = document.createElement('div');
                         messageElement.classList.add('message-entry');
+                        messageElement.style.marginLeft = `${indent * 30}px`;
                         messageElement.innerHTML = `<p><strong>${msg.user}:</strong> ${msg.text}</p>`;
+                        // Add reply button
+                        const replyBtn = document.createElement('button');
+                        replyBtn.textContent = 'Reply';
+                        replyBtn.style.marginLeft = '10px';
+                        replyBtn.onclick = function() {
+                            window.replyParentId = msg.timestamp;
+                            messageInput.focus();
+                            messageInput.placeholder = `Replying to ${msg.user}...`;
+                        };
+                        messageElement.appendChild(replyBtn);
                         chatHistory.appendChild(messageElement);
+                        // Render children (replies)
+                        msg.children.forEach(child => renderThread(child, indent+1));
+                    }
+                    // Only render messages with no parentId
+                    messages.slice().reverse().forEach(msg => {
+                        if (!msg.parentId) renderThread(msg);
                     });
                     lastMessageCount = messages.length;
                 }
@@ -119,7 +146,9 @@
                 const getResponse = await fetch(JSON_BIN_URL, { headers: { 'X-Master-Key': API_KEY } });
                 const currentData = await getResponse.json();
                 const messages = currentData.record;
-                const newMessage = { user, text, timestamp: new Date().toISOString() };
+                // Accept optional parentId for threading
+                const newMessage = { user, text, timestamp: new Date().toISOString(), parentId: window.replyParentId || null };
+                window.replyParentId = null;
                 messages.push(newMessage);
                 await fetch(JSON_BIN_URL, {
                     method: 'PUT',
@@ -139,6 +168,7 @@
             if (username && message) {
                 sendMessage(username, message);
                 messageInput.value = '';
+                messageInput.placeholder = 'Type a message...';
             }
         });
         
